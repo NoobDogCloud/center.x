@@ -1,0 +1,1 @@
+gae run -v 3.0.0 -n gfw_center -h 192.168.50.241:30002/docker/ -f gfwCenter.x-#{v}-jar-with-dependencies.jar

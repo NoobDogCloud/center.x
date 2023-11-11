@@ -1,0 +1,18 @@
+### 安装k8s集群
+```
+1:服务器必须翻墙，否则无法访问
+2:服务器必须安装docker
+3:服务器操作系统内核必须大于等于5.14
+4:kubeSphere版本与k8s版本绑定，不要修改k8s版本
+```
+#### 步骤
+```
+sudo kk create config
+sudo vi config-sample.yaml
+{
+    1:修改节点连接信息
+    2:修改网络插件{spec.network.plugin}为:cilium
+}
+sudo kk init os -f config-sample.yaml
+sudo kk create cluster -f config-sample.yaml --with-kubesphere
+```

@@ -1,0 +1,15 @@
+import junit.framework.TestCase;
+import model.Kubernetes.KubernetesModel;
+
+public class KubernetesModelTest extends TestCase {
+    /**
+     * 测试数据前提
+     * 1:k8s集群有数据
+     * 2:应用分配了有效K8S集群
+     * 3:有测试用test docker image
+     */
+    public void testKubernetesModel() {
+        KubernetesModel model = KubernetesModel.build("");
+        assertNotNull(model);
+    }
+}

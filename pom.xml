@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>gfw</groupId>
+    <artifactId>gfwCenter.x</artifactId>
+    <version>3.0.0</version>
+
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <graalvm.version>22.0.0.2</graalvm.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.13.2</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.github.noobdogcloud</groupId>
+            <artifactId>SDK</artifactId>
+            <version>0.0.2</version>
+        </dependency>
+        <!-- 内嵌数据库 -->
+        <!-- https://mvnrepository.com/artifact/com.h2database/h2 -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <version>2.1.214</version>
+        </dependency>
+        <dependency>
+            <groupId>io.lettuce</groupId>
+            <artifactId>lettuce-core</artifactId>
+            <version>6.2.0.RELEASE</version>
+        </dependency>
+        <!-- Jwt库 -->
+        <!-- https://mvnrepository.com/artifact/com.auth0/java-jwt -->
+        <dependency>
+            <groupId>com.auth0</groupId>
+            <artifactId>java-jwt</artifactId>
+            <version>4.0.0</version>
+        </dependency>
+        <!-- k8s 库 -->
+        <!-- https://mvnrepository.com/artifact/io.fabric8/kubernetes-client -->
+        <dependency>
+            <groupId>io.fabric8</groupId>
+            <artifactId>kubernetes-client</artifactId>
+            <version>6.1.1</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.graalvm.nativeimage/native-image-maven-plugin -->
+        <dependency>
+            <groupId>org.graalvm.nativeimage</groupId>
+            <artifactId>native-image-maven-plugin</artifactId>
+            <version>21.2.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-resources-plugin -->
+        <dependency>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-resources-plugin</artifactId>
+            <version>3.2.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-assembly-plugin</artifactId>
+            <version>3.3.0</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.graalvm.nativeimage/svm -->
+        <!-- 开启 native image 编译
+        <dependency>
+            <groupId>org.graalvm.nativeimage</groupId>
+            <artifactId>svm</artifactId>
+            <version>22.0.0.2</version>
+            <scope>provided</scope>
+        </dependency>
+        -->
+    </dependencies>
+
+    <build>
+        <!--默认源代码目录 -->
+        <sourceDirectory>src</sourceDirectory>
+        <testSourceDirectory>test/java</testSourceDirectory>
+        <resources>
+            <resource>
+                <directory>resources</directory>
+                <includes>
+                    <!--包含文件夹以及子文件夹下所有资源-->
+                    <include>**/*.*</include>
+                </includes>
+            </resource>
+        </resources>
+        <!--  <outputDirectory>${project.build.directory}/classes</outputDirectory> ${project.build.directory}就是我们通常看到的target目录 -->
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.8.1</version>
+                <configuration>
+                    <source>17</source>
+                    <target>17</target>
+                    <encoding>UTF-8</encoding>
+                </configuration>
+            </plugin>
+            <!--
+            <plugin>
+                <groupId>putao520</groupId>
+                <artifactId>maven-plugin-reflection-config</artifactId>
+                <version>0.0.1</version>
+                <configuration>
+                    <files>${basedir}/target/classes/main/java/Api</files>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>reflection</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>3.1.0</version>
+                <configuration>
+                    <descriptorRefs>
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                    </descriptorRefs>
+                    <archive>
+                        <manifest>
+                            <mainClass>main.java.Main.main</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>make-assembly</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- 开启native image编译
+            <plugin>
+                <groupId>org.graalvm.nativeimage</groupId>
+                <artifactId>native-image-maven-plugin</artifactId>
+                <version>21.2.0</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>native-image</goal>
+                        </goals>
+                        <phase>package</phase>
+                    </execution>
+                </executions>
+                <configuration>
+                    <skip>false</skip>
+                    <mainClass>main.java.Main.main</mainClass>
+                    <imageName>gfwCenter</imageName>
+                </configuration>
+            </plugin>
+            -->
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>release-sign-artifacts</id>
+            <activation>
+                <property>
+                    <name>performRelease</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+    <distributionManagement>
+        <repository>
+            <id>rdc-releases</id>
+            <url>https://packages.aliyun.com/maven/repository/2008022-release-LfFRDq</url>
+        </repository>
+        <snapshotRepository>
+            <id>rdc-snapshots</id>
+            <url>https://packages.aliyun.com/maven/repository/2008022-snapshot-oYlpxF</url>
+        </snapshotRepository>
+    </distributionManagement>
+
+</project>

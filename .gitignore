@@ -1,0 +1,9 @@
+# 项目排除路径
+/target/
+/.idea/
+/gfwCenter.iml
+/gfwCenter.build_artifacts.txt
+/gfwCenter.exe
+/db/
+/doc/
+/setup.txt

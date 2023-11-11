@@ -1,0 +1,7 @@
+### JVM方式 运行JAR
+java -agentlib:native-image-agent=config-output-dir=./resources/META-INF/native-image/gfw/gfwCenter.x/graalvm-image-json/ '-Dfile.encoding=utf-8' -jar gfwCenter.x-3.0.0-jar-with-dependencies.jar -k grapeSoft@ -p 805
+
+### 使用第三方组件触发未知故障时（极大概率反射类不存在）
+
+### 应用启动测试
+gfwCenter.exe -k grapeSoft@ -p 805

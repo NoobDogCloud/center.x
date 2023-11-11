@@ -1,0 +1,998 @@
+import common.java.Database.DBLayer;
+import common.java.Database.DBManager;
+import common.java.Time.TimeHelper;
+import common.java.nLogger.nLogger;
+import db.DbConfig;
+import junit.framework.TestCase;
+import org.json.gsc.JSONArray;
+import org.json.gsc.JSONObject;
+
+import java.io.File;
+
+public class InstallerTest extends TestCase {
+
+    private void init_table(DBLayer db) {
+        String _apps = "DROP TABLE `apps`";
+        if (!db.run(_apps)) {
+            System.out.println("删除表[apps]失败");
+        }
+        String apps = "CREATE TABLE `apps` (`id` int NOT NULL AUTO_INCREMENT,`name` varchar(255) DEFAULT NULL,`desc` varchar(255) DEFAULT NULL,`createAt` datetime DEFAULT NULL,`updateAt` datetime DEFAULT NULL,`domain` varchar(255) DEFAULT NULL,`state` int DEFAULT NULL,`roles` varchar(5120) DEFAULT NULL,`config` varchar(1280) DEFAULT NULL,`k8s` int DEFAULT NULL,`master` varchar(1024) DEFAULT NULL COMMENT '主控连接地址',`secret` varchar(255) DEFAULT NULL COMMENT '主控连接秘钥（公钥）',PRIMARY KEY (`id`))";
+        if (!db.run(apps)) {
+            System.out.println("创建表[apps]失败");
+        }
+
+        String _configs = "DROP TABLE `configs`";
+        if (!db.run(_configs)) {
+            System.out.println("删除表[configs]失败");
+        }
+        String configs = "CREATE TABLE `configs` (`id` int NOT NULL AUTO_INCREMENT,`name` varchar(255) DEFAULT NULL,`config` varchar(2048) DEFAULT NULL,`templateId` int DEFAULT NULL,`desc` varchar(255) DEFAULT NULL,`createAt` datetime DEFAULT NULL,`updateAt` datetime DEFAULT NULL,`type` varchar(255) DEFAULT NULL, PRIMARY KEY (`id`))";
+        if (!db.run(configs)) {
+            System.out.println("创建表[configs]失败");
+        }
+
+        String _configTemplates = "DROP TABLE `configTemplates`";
+        if (!db.run(_configTemplates)) {
+            System.out.println("删除表[configTemplates]失败");
+        }
+        String configTemplates = "CREATE TABLE `configTemplates` (`id` int NOT NULL AUTO_INCREMENT,`template` varchar(10240) DEFAULT NULL,`createAt` datetime DEFAULT NULL,`updateAt` datetime DEFAULT NULL,`name` varchar(255) NOT NULL COMMENT '模板名称',`type` varchar(255) NOT NULL COMMENT '模板类型', PRIMARY KEY (`id`))";
+        if (!db.run(configTemplates)) {
+            System.out.println("创建表[configTemplates]失败");
+        }
+
+        String _services = "DROP TABLE `services`";
+        if (!db.run(_services)) {
+            System.out.println("删除表[services]失败");
+        }
+        String services = "CREATE TABLE `services` (`id` int NOT NULL AUTO_INCREMENT,`name` varchar(255) DEFAULT NULL COMMENT '服务名',`desc` varchar(255) DEFAULT NULL COMMENT '说明',`transfer` varchar(255) DEFAULT NULL COMMENT '服务业务接收模式',`peerAddr` varchar(2048) DEFAULT NULL COMMENT 'http模式下连接信息',`subAddr` varchar(1024) DEFAULT NULL COMMENT '订阅模式下连接信息',`debug` int DEFAULT NULL,`port` int DEFAULT NULL COMMENT '服务基础端口',`parameterSchema` varchar(5120) DEFAULT NULL COMMENT '参数配置JSON',`dockerImage` varchar(2048) DEFAULT NULL COMMENT 'docker镜像地址',PRIMARY KEY (`id`))";
+        if (!db.run(services)) {
+            System.out.println("创建表[services]失败");
+        }
+
+        String _servicesDeploy = "DROP TABLE `servicesDeploy`";
+        if (!db.run(_servicesDeploy)) {
+            System.out.println("删除表[servicesDeploy]失败");
+        }
+        String servicesDeploy = "CREATE TABLE `servicesDeploy` (`id` int NOT NULL AUTO_INCREMENT,`appId` int DEFAULT NULL COMMENT '所属应用ID',`serviceId` int DEFAULT NULL COMMENT '所属服务ID',`debug` int DEFAULT NULL,`createAt` datetime DEFAULT NULL,`updateAt` datetime DEFAULT NULL,`dataModel` varchar(10240) DEFAULT NULL COMMENT '业务模型',`state` int DEFAULT NULL COMMENT '部署状态',`config` varchar(2048) DEFAULT NULL COMMENT '配置',`name` varchar(255) DEFAULT NULL COMMENT '部署名称',`replicaSet` int DEFAULT NULL COMMENT '部署副本数量',`parameter` varchar(2048) DEFAULT NULL COMMENT '部署时启动参数',PRIMARY KEY (`id`))";
+        if (!db.run(servicesDeploy)) {
+            System.out.println("创建表[servicesDeploy]失败");
+        }
+
+        String _k8sServer = "DROP TABLE `k8s`";
+        if (!db.run(_k8sServer)) {
+            System.out.println("删除表[k8sServer]失败");
+        }
+        String k8sServer = "CREATE TABLE `k8s` (`id` int NOT NULL AUTO_INCREMENT,`desc` varchar(255) DEFAULT NULL,`config` varchar(10240) NOT NULL,`state` int(10) NOT NULL,`name` varchar(255) NOT NULL,`cert` varchar(1024) DEFAULT NULL,PRIMARY KEY (`id`))";
+        if (!db.run(k8sServer)) {
+            System.out.println("创建表[k8s]失败");
+        }
+
+        String _userServer = "DROP TABLE `users`";
+        if (!db.run(_userServer)) {
+            System.out.println("删除表[users]失败");
+        }
+        String userServer = "CREATE TABLE `users` (`userid` varchar(30) NOT NULL,`avatar` varchar(512) DEFAULT NULL,`name` varchar(35) DEFAULT NULL,`title` varchar(255) DEFAULT NULL,`phone` varchar(255) DEFAULT NULL,`password` varchar(512) DEFAULT NULL,`salt` varchar(255) DEFAULT NULL,`level` int DEFAULT NULL, PRIMARY KEY (`userid`))";
+        if (!db.run(userServer)) {
+            System.out.println("创建表[users]失败");
+        }
+    }
+
+    private void init_apps(DBLayer db) {
+        db.form("apps");
+        JSONObject cfg = JSONObject.build()
+                .put("cache", "redis")
+                .put("other", JSONArray.build())
+                .put("store", "ceph")
+                .put("db", "mongodb");
+        JSONObject test = JSONObject.build().put("name", "test-demo")
+                .put("desc", "用于开发测试环境")
+                .put("createAt", TimeHelper.build().nowDatetime())
+                .put("updateAt", TimeHelper.build().nowDatetime())
+                .put("domain", "")
+                .put("state", 1)
+                .put("roles", "")
+                .put("config", cfg)
+                .put("k8s", 0)
+                .put("secret", "")
+                .put("master", "");
+        db.data(test).insert();
+        test.put("name", "test-demo2");
+        db.data(test).insert();
+    }
+
+    private void init_configs(DBLayer db) {
+        db.form("configs");
+        String configStr = """
+                [
+                      {
+                        "name": "mongodb",
+                        "type": "db",
+                        "config": {
+                          "user": "admin",
+                          "password": "123456",
+                          "keepalive": true,
+                          "dbName": "mongodb",
+                          "maxTotal": 30000,
+                          "database": "app",
+                          "nodeAddresses": [
+                            "12.12.12.120:27017"
+                          ]
+                        },
+                        "templateId": 1,
+                        "desc": "",
+                        "createAt": "2020-07-11 11:38:34",
+                        "updateAt": "2020-07-11 11:38:34"
+                      },
+                      {
+                        "name": "redis",
+                        "config": {
+                          "cacheName": "redis",
+                          "password": "123456",
+                          "maxIdle": 300,
+                          "maxTotal": 5000,
+                          "maxWaitMillis": 10000,
+                          "single": "12.12.12.120:6379"
+                        },
+                        "templateId": 0,
+                        "desc": "",
+                        "type": "cache",
+                        "createAt": "2020-07-11 11:38:34",
+                        "updateAt": "2020-07-11 11:38:34"
+                      },
+                      {
+                        "name": "mysql",
+                        "config": {
+                          "dbName": "mysql",
+                          "user": "root",
+                          "password": "123456",
+                          "timezone": "Asia/Shanghai",
+                          "database": "test",
+                          "initsize": 2,
+                          "maxactive": 60,
+                          "minidle": 2,
+                          "maxwait": 5000,
+                          "validationquery": "select 1",
+                          "poolpreparedstatements": false,
+                          "useUnicode": true,
+                          "characterEncoding": "UTF-8",
+                          "class": "com.mysql.jdbc.Driver",
+                          "host": "mysql://12.12.12.120:3306"
+                        },
+                        "templateId": 0,
+                        "desc": "",
+                        "type": "db",
+                        "createAt": "2020-07-11 11:38:34",
+                        "updateAt": "2019-03-14 00:27:35"
+                      },
+                      {
+                        "name": "minio",
+                        "config": {
+                          "user": "xxx",
+                          "password": "xxx",
+                          "secretKey": "xxx",
+                          "nodeAddress": [
+                            "http://47.106.113.119:8888"
+                          ]
+                        },
+                        "templateId": 0,
+                        "desc": "",
+                        "type": "store",
+                        "createAt": "2019-03-14 00:27:35",
+                        "updateAt": "2019-03-14 00:27:35"
+                      },
+                      {
+                        "name": "h2",
+                        "config": {
+                          "dbName": "h2",
+                          "user": "sa",
+                          "password": "",
+                          "database": "gsc",
+                          "initsize": 2,
+                          "maxactive": 60,
+                          "minidle": 2,
+                          "maxwait": 5000,
+                          "validationquery": "VALUES 1",
+                          "poolpreparedstatements": false,
+                          "class": "org.h2.jdbcx.JdbcDataSource",
+                          "host": "h2:file:~/data"
+                        },
+                        "templateId": 0,
+                        "desc": "",
+                        "type": "db",
+                        "createAt": "2020-07-11 11:38:34",
+                        "updateAt": "2019-03-14 00:27:35"
+                      }
+                    ]""";
+        JSONArray<JSONObject> data = JSONArray.build(configStr);
+        for (JSONObject v : data) {
+            db.data(v).insert();
+        }
+    }
+
+    private void init_configTemplates(DBLayer db) {
+        db.form("configTemplates");
+        String str = """
+                [
+                      {
+                        "name": "mongodb",
+                        "type": "db",
+                        "template": [
+                          {
+                            "name": "user",
+                            "text": "用户名",
+                            "init": "",
+                            "checkId": 26
+                          },
+                          {
+                            "name": "password",
+                            "text": "密码",
+                            "init": "",
+                            "checkId": 22
+                          },
+                          {
+                            "name": "keepalive",
+                            "text": "保持连接",
+                            "init": true,
+                            "checkId": 32
+                          },
+                          {
+                            "name": "dbName",
+                            "text": "数据库",
+                            "init": "",
+                            "checkId": 6
+                          },
+                          {
+                            "name": "maxTotal",
+                            "text": "最大连接数",
+                            "init": 30000,
+                            "checkId": 6
+                          },
+                          {
+                            "name": "database",
+                            "text": "数据库名称",
+                            "init": "",
+                            "checkId": 6
+                          },
+                          {
+                            "name": "nodeAddresses",
+                            "text": "连接地址",
+                            "init": "[]",
+                            "checkId": 0,
+                            "classify": "array"
+                          }
+                        ]
+                      },
+                      {
+                        "name": "redis",
+                        "type": "cache",
+                        "template": [
+                          {
+                            "name": "cacheName",
+                            "text": "用户名",
+                            "init": "",
+                            "checkId": 26
+                          },
+                          {
+                            "name": "password",
+                            "text": "密码",
+                            "init": "",
+                            "checkId": 22
+                          },
+                          {
+                            "name": "ssl",
+                            "text": "ssl",
+                            "init": false,
+                            "checkId": 32
+                          },
+                          {
+                            "name": "maxIdle",
+                            "text": "闲置连接数",
+                            "init": 300,
+                            "checkId": 6
+                          },
+                          {
+                            "name": "maxTotal",
+                            "text": "最大连接数",
+                            "init": 30000,
+                            "checkId": 6
+                          },
+                          {
+                            "name": "maxWaitMillis",
+                            "text": "等待超时",
+                            "init": 10000,
+                            "checkId": 6
+                          },
+                          {
+                            "name": "single",
+                            "text": "单机模式",
+                            "init": "",
+                            "checkId": 0
+                          },
+                          {
+                            "name": "sentinel",
+                            "text": "哨兵模式",
+                            "init": "[]",
+                            "checkId": 0,
+                            "classify": "array"
+                          },
+                          {
+                            "name": "masterslave",
+                            "text": "主从模式",
+                            "init": "[]",
+                            "checkId": 0,
+                            "classify": "array"
+                          },
+                          {
+                            "name": "cluster",
+                            "text": "副本模式",
+                            "init": "[]",
+                            "checkId": 0,
+                            "classify": "array"
+                          }
+                        ]
+                      },
+                      {
+                        "name": "mysql",
+                        "type": "db",
+                        "template": [
+                          {
+                            "name": "user",
+                            "text": "用户名",
+                            "init": "",
+                            "checkId": 26
+                          },
+                          {
+                            "name": "password",
+                            "text": "密码",
+                            "init": "",
+                            "checkId": 22,
+                            "required": true
+                          },
+                          {
+                            "name": "timezone",
+                            "text": "时区",
+                            "init": "Asia/Shanghai",
+                            "checkId": 0
+                          },
+                          {
+                            "name": "keepalive",
+                            "text": "保持连接",
+                            "init": true,
+                            "checkId": 32
+                          },
+                          {
+                            "name": "dbName",
+                            "text": "数据库",
+                            "init": "",
+                            "checkId": 6,
+                            "required": true
+                          },
+                          {
+                            "name": "maxactive",
+                            "text": "最大连接数",
+                            "init": 60,
+                            "checkId": 6
+                          },
+                          {
+                            "name": "initsize",
+                            "text": "初始化连接数",
+                            "init": 2,
+                            "checkId": 6
+                          },
+                          {
+                            "name": "minidle",
+                            "text": "闲置连接数",
+                            "init": 2,
+                            "checkId": 6
+                          },
+                          {
+                            "name": "maxwait",
+                            "text": "操作超时",
+                            "init": 5000,
+                            "checkId": 6
+                          },
+                          {
+                            "name": "validationquery",
+                            "text": "验证SQL",
+                            "init": "",
+                            "checkId": 6
+                          },
+                          {
+                            "name": "poolpreparedstatements",
+                            "text": "静态解析",
+                            "init": false,
+                            "checkId": 32
+                          },
+                          {
+                            "name": "useUnicode",
+                            "text": "使用unicode",
+                            "init": true,
+                            "checkId": 32
+                          },
+                          {
+                            "name": "database",
+                            "text": "数据库名称",
+                            "init": "",
+                            "checkId": 0,
+                            "required": true
+                          },
+                          {
+                            "name": "characterEncoding",
+                            "text": "默认字符集",
+                            "init": "UTF-8",
+                            "checkId": 0
+                          },
+                          {
+                            "name": "class",
+                            "text": "数据库驱动",
+                            "init": "com.mysql.jdbc.Driver",
+                            "checkId": 0
+                          },
+                          {
+                            "name": "host",
+                            "text": "连接地址",
+                            "init": "",
+                            "checkId": 0,
+                            "required": true
+                          }
+                        ]
+                      },
+                      {
+                        "name": "minio",
+                        "type": "store",
+                        "template": [
+                          {
+                            "name": "user",
+                            "text": "用户名",
+                            "init": "",
+                            "checkId": 26
+                          },
+                          {
+                            "name": "password",
+                            "text": "密码",
+                            "init": "",
+                            "checkId": 22,
+                            "required": true
+                          },
+                          {
+                            "name": "secretKey",
+                            "text": "秘钥",
+                            "init": "",
+                            "checkId": 22,
+                            "required": true
+                          },
+                          {
+                            "name": "nodeAddress",
+                            "text": "连接地址",
+                            "init": "[]",
+                            "checkId": 0,
+                            "classify": "array",
+                            "required": true
+                          }
+                        ]
+                      }
+                    ]""";
+        JSONArray<JSONObject> data = JSONArray.build(str);
+        for (JSONObject v : data) {
+            db.data(v).insert();
+        }
+    }
+
+    private void init_services(DBLayer db) {
+        db.form("services");
+        String str = """
+                [
+                      {
+                        "name": "user",
+                        "desc": "用户微服务",
+                        "transfer": "pulsar",
+                        "peerAddr": ""
+                        "subAddr": ""
+                        "parameterSchema": ""
+                        "dockerImage": ""
+                        "port": 1006
+                      },
+                      {
+                        "name": "test",
+                        "desc": "框架测试服务",
+                        "transfer": "http",
+                        "peerAddr": ""
+                        "subAddr": ""
+                        "parameterSchema": ""
+                        "dockerImage": ""
+                        "port": 1988
+                      }
+                    ]""";
+        JSONArray<JSONObject> data = JSONArray.build(str);
+        for (JSONObject v : data) {
+            db.data(v).insert();
+        }
+    }
+
+    private void init_k8s(DBLayer db) {
+        db.form("k8s");
+        JSONObject k8s = JSONObject.build()
+                .put("name", "k8s")
+                .put("desc", "k8s配置")
+                .put("config", "")
+                .put("state", 1)
+                .put("cert", "");
+        db.data(k8s).insert();
+    }
+
+    private void init_servicesDeploy(DBLayer db) {
+        db.form("servicesDeploy");
+        String str = """
+                [
+                      {
+                        "id": 1,
+                        "appId": 1,
+                        "serviceId": 1,
+                        "name": "Duser",
+                        "parameter": "{}",
+                        "debug": 0,
+                        "state": 1,
+                        "replicaSet": 1,
+                        "dataModel": {
+                          "user": {
+                            "tableName": "user",
+                            "user": true,
+                            "rule": [
+                              {
+                                "name": "realname",
+                                "type": 0,
+                                "init": "",
+                                "failed": "",
+                                "checkId": 26,
+                                "text": "真实姓名",
+                                "required": true
+                              },
+                              {
+                                "name": "_name",
+                                "type": 2,
+                                "init": "",
+                                "failed": "",
+                                "checkId": 26
+                              },
+                              {
+                                "name": "ic_openid",
+                                "type": 2,
+                                "init": "",
+                                "failed": "",
+                                "checkId": 26
+                              },
+                              {
+                                "name": "did",
+                                "type": 0,
+                                "init": "",
+                                "failed": "",
+                                "checkId": 1
+                              },
+                              {
+                                "name": "upw",
+                                "type": 1,
+                                "init": "",
+                                "failed": "",
+                                "checkId": 26
+                              },
+                              {
+                                "name": "state",
+                                "type": 0,
+                                "init": 0,
+                                "failed": 0,
+                                "checkId": 6
+                              },
+                              {
+                                "name": "gov_role",
+                                "type": 0,
+                                "init": 0,
+                                "failed": 0,
+                                "checkId": 6
+                              },
+                              {
+                                "name": "createAt",
+                                "type": 2,
+                                "init": ":timestamp",
+                                "failed": ":timestamp",
+                                "checkId": 27
+                              },
+                              {
+                                "name": "balance",
+                                "type": 2,
+                                "init": 0,
+                                "failed": 0,
+                                "checkId": 6
+                              }
+                            ],
+                            "perm": {
+                              "r": {
+                                "type": "group",
+                                "logic": ">",
+                                "value": [
+                                  "everyone"
+                                ]
+                              },
+                              "u": {
+                                "type": "group",
+                                "logic": 10000
+                              },
+                              "c": {
+                                "type": "group",
+                                "logic": 10000
+                              },
+                              "d": {
+                                "type": "group",
+                                "logic": 10000
+                              },
+                              "o": {
+                                "type": "group",
+                                "logic": 10000
+                              }
+                            }
+                          },
+                          "manager": {
+                            "tableName": "manager",
+                            "user": true,
+                            "rule": [
+                              {
+                                "name": "username",
+                                "type": 0,
+                                "init": "",
+                                "failed": "",
+                                "checkId": 26
+                              },
+                              {
+                                "name": "_name",
+                                "type": 2,
+                                "init": "",
+                                "failed": "",
+                                "checkId": 26
+                              },
+                              {
+                                "name": "upw",
+                                "type": 1,
+                                "init": "",
+                                "failed": "",
+                                "checkId": 22
+                              },
+                              {
+                                "name": "state",
+                                "type": 0,
+                                "init": 0,
+                                "failed": 0,
+                                "checkId": 6
+                              },
+                              {
+                                "name": "time",
+                                "type": 2,
+                                "init": ":timestamp",
+                                "failed": ":timestamp",
+                                "checkId": 27
+                              },
+                              {
+                                "name": "sid",
+                                "type": 0,
+                                "init": "",
+                                "failed": "",
+                                "checkId": 26
+                              },
+                              {
+                                "name": "did",
+                                "type": 0,
+                                "init": "",
+                                "failed": "",
+                                "checkId": 26
+                              }
+                            ],
+                            "perm": {
+                              "r": {
+                                "type": "group",
+                                "logic": ">"
+                              },
+                              "u": {
+                                "type": "group",
+                                "logic": 10000
+                              },
+                              "c": {
+                                "type": "group",
+                                "logic": 1000
+                              },
+                              "d": {
+                                "type": "group",
+                                "logic": 10000
+                              },
+                              "o": {
+                                "type": "group",
+                                "logic": 1000
+                              }
+                            }
+                          },
+                          "userlogs": {
+                            "tableName": "userlogs",
+                            "rule": [
+                              {
+                                "name": "mobile",
+                                "type": 2,
+                                "init": "",
+                                "failed": "",
+                                "checkId": 11
+                              },
+                              {
+                                "name": "uid",
+                                "type": 2,
+                                "init": "",
+                                "failed": "",
+                                "checkId": 26
+                              },
+                              {
+                                "name": "currentcontrol",
+                                "type": 2,
+                                "init": "",
+                                "failed": "",
+                                "checkId": 1
+                              },
+                              {
+                                "name": "did",
+                                "type": 2,
+                                "init": "",
+                                "failed": "",
+                                "checkId": 1
+                              },
+                              {
+                                "name": "time",
+                                "type": 0,
+                                "init": ":timestamp",
+                                "failed": ":timestamp",
+                                "checkId": 27
+                              }
+                            ],
+                            "perm": {
+                              "r": {
+                                "type": "group",
+                                "logic": 1000
+                              },
+                              "u": {
+                                "type": "group",
+                                "logic": 1000
+                              },
+                              "c": {
+                                "type": "group",
+                                "logic": 1000
+                              },
+                              "d": {
+                                "type": "group",
+                                "logic": 1000
+                              },
+                              "o": {
+                                "type": "group",
+                                "logic": 1000
+                              }
+                            }
+                          }
+                        },
+                        "config": {
+                          "cache": "redis",
+                          "other": [],
+                          "db": "mongodb",
+                          "store": "fastdfs",
+                          "mq": "kafka"
+                        },
+                        "createAt": "2020-07-11 11:38:34",
+                        "updateAt": "2020-07-11 11:38:34"
+                      },
+                      {
+                        "id": 2,
+                        "appId": 1,
+                        "serviceId": 2,
+                        "name": "Dtest",
+                        "parameter": "{}",
+                        "debug": "1",
+                        "createAt": "2020-07-11 11:38:34",
+                        "state": 1,
+                        "replicaSet": 1,
+                        "dataModel": {
+                          "test": {
+                            "tableName": "test",
+                            "rule": [
+                              {
+                                "name": "name",
+                                "type": 0,
+                                "init": "",
+                                "failed": "",
+                                "checkId": 1,
+                                "text": "名称啊",
+                                "required": true
+                              },
+                              {
+                                "name": "signname",
+                                "type": 0,
+                                "init": "",
+                                "failed": "",
+                                "checkId": 1
+                              },
+                              {
+                                "name": "aid",
+                                "type": 2,
+                                "init": 0,
+                                "failed": 0,
+                                "checkId": 6,
+                                "join": {
+                                  "item": "test2",
+                                  "key": "_id"
+                                },
+                                "constraint": {
+                                  "item": "test2",
+                                  "key": "_id"
+                                }
+                              },
+                              {
+                                "name": "sortId",
+                                "type": 2,
+                                "init": 0,
+                                "failed": 0,
+                                "checkId": 6
+                              },
+                              {
+                                "name": "time",
+                                "type": 2,
+                                "init": ":timestamp",
+                                "failed": ":timestamp",
+                                "checkId": 27
+                              }
+                            ],
+                            "perm": {
+                              "c": {
+                                "type": "group",
+                                "logic": ">",
+                                "value": "everyone,root,user"
+                              },
+                              "u": {
+                                "type": "group",
+                                "logic": ">",
+                                "value": "user,everyone,root,admin"
+                              },
+                              "r": {
+                                "type": "group",
+                                "logic": ">",
+                                "value": "everyone"
+                              },
+                              "d": {
+                                "type": "group",
+                                "logic": ">",
+                                "value": "everyone"
+                              }
+                            }
+                          },
+                          "test2": {
+                            "tableName": "test2",
+                            "rule": [
+                              {
+                                "name": "name2",
+                                "type": 0,
+                                "init": "",
+                                "failed": "",
+                                "checkId": 1,
+                                "text": "名称啊",
+                                "required": true
+                              },
+                              {
+                                "name": "signname2",
+                                "type": 0,
+                                "init": "",
+                                "failed": "",
+                                "checkId": 1
+                              },
+                              {
+                                "name": "aid2",
+                                "type": 2,
+                                "init": 0,
+                                "failed": 0,
+                                "checkId": 6
+                              },
+                              {
+                                "name": "time2",
+                                "type": 2,
+                                "init": ":timestamp",
+                                "failed": ":timestamp",
+                                "checkId": 27
+                              }
+                            ],
+                            "perm": {
+                              "c": {
+                                "type": "group",
+                                "logic": ">",
+                                "value": "everyone,root,user"
+                              },
+                              "u": {
+                                "type": "group",
+                                "logic": ">",
+                                "value": "user,everyone,root,admin"
+                              },
+                              "r": {
+                                "type": "group",
+                                "logic": ">",
+                                "value": "everyone"
+                              },
+                              "d": {
+                                "type": "group",
+                                "logic": ">",
+                                "value": "everyone"
+                              }
+                            }
+                          }
+                        },
+                        "config": {
+                          "cache": "redis",
+                          "other": [],
+                          "db": "mongodb",
+                          "store": "fastdfs",
+                          "mq": "kafka"
+                        },
+                        "updateAt": "2020-07-11 11:38:34"
+                      }
+                    ]""";
+        JSONArray<JSONObject> data = JSONArray.build(str);
+        for (JSONObject v : data) {
+            v.remove("id");
+            db.data(v).insert();
+        }
+    }
+
+    private void init_users(DBLayer db) {
+        db.form("users");
+        String str = """
+                [
+                      {
+                        "userid": "putao520",
+                        "avatar": "",
+                        "name": "葡萄",
+                        "title": "Admin",
+                        "phone": "15215625507"
+                        "password": "c740f04d0367fe13b388bcd26205f552"
+                        "salt": "xED"
+                        "level": 10000
+                      }
+                    ]""";
+        JSONArray<JSONObject> data = JSONArray.build(str);
+        for (JSONObject v : data) {
+            db.data(v).insert();
+        }
+    }
+
+    public void test_init() {
+        nLogger.setDebug(true);
+        DBLayer db = DBLayer.buildWithConfig(h2Config.getConfig().toString());
+        // 初始化 表
+        init_table(db);
+        // 初始化 应用
+        init_apps(db);
+        // 初始化 配置
+        init_configs(db);
+        // 初始化 配置模板
+        init_configTemplates(db);
+        // 初始化 服务
+        init_services(db);
+        // 初始化 服务部署
+        init_servicesDeploy(db);
+        // 初始化 k8s
+        init_k8s(db);
+        // 初始化 用户
+        init_users(db);
+
+        // 检查表
+        db.form("apps");
+        System.out.println(db.select());
+        db.form("configs");
+        System.out.println(db.select());
+        db.form("configTemplates");
+        System.out.println(db.select());
+        db.form("services");
+        System.out.println(db.select());
+        db.form("servicesDeploy");
+        System.out.println(db.select());
+        getBuildMeta(db);
+    }
+
+    public void getBuildMeta(DBLayer db) {
+        DBManager.getInstance(db).doExport(new File("./install.json"));
+    }
+}

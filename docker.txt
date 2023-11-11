@@ -1,0 +1,17 @@
+=================== 制作包
+// 构造image
+docker build -t gfw_center:3.0.0 .
+// 打标签
+docker tag gfw_center:3.0.0 core.harbor.domain:30002/docker/gfw_center:3.0.0
+// 推送
+docker push core.harbor.domain:30002/docker/gfw_center:3.0.0
+=================== 使用包
+// 拉取docker
+docker pull 12.12.12.100:30002/docker/gfw_center:3.0.0
+// 启动docker
+docker run -d -p 805:805 12.12.12.100:30002/docker/gfw_center:3.0.0
+=================== 登录私库(coding)
+docker login -u docker-1628862974895 -p fc23f51b6ea937228c6a40f924a75ce462c91f4f putao282-docker.pkg.coding.net
+docker login -u admin -p Harbor12345 core.harbor.domain:30002
+docker login -u admin -p Harbor12345 192.168.50.241:30002
+docker login -u admin -p Harbor12345 12.12.12.100:30002

@@ -1,0 +1,270 @@
+import common.java.Encrypt.Base64;
+import common.java.Thread.ThreadHelper;
+import common.java.Time.TimeHelper;
+import io.fabric8.kubernetes.api.model.*;
+import io.fabric8.kubernetes.api.model.apps.Deployment;
+import io.fabric8.kubernetes.api.model.apps.DeploymentBuilder;
+import io.fabric8.kubernetes.api.model.networking.v1.Ingress;
+import io.fabric8.kubernetes.api.model.networking.v1.IngressBuilder;
+import io.fabric8.kubernetes.api.model.networking.v1.IngressServiceBackend;
+import io.fabric8.kubernetes.api.model.networking.v1.ServiceBackendPortBuilder;
+import io.fabric8.kubernetes.client.Config;
+import io.fabric8.kubernetes.client.DefaultKubernetesClient;
+import io.fabric8.kubernetes.client.KubernetesClient;
+import junit.framework.TestCase;
+import org.json.gsc.JSONObject;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
+
+// https://github.com/kubernetes-client/java
+// https://blog.csdn.net/qq_31152023/article/details/107022166
+// kubernetes version >= 1.19
+/*
+1:根据应用创建对应的 namespace(注意判断是否存在)
+2:根据部署信息生成 k8s部署yaml 字符串
+3:部署到k8s
+4:获得新的service访问的内网ip
+5:回填vip/ip到部署信息
+6:每个NS都需要默认带一个ingress
+* */
+
+/*
+1:根据所有应用生成 Ingress 配置
+2:为每个应用生成NS
+3:为每个微服务生成 service + deployment
+* */
+public class K8STest extends TestCase {
+    public void test_k8s_client() {
+        String KubeConfigContent = "apiVersion: v1\n" +
+                "clusters:\n" +
+                "- cluster:\n" +
+                "    certificate-authority-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUM1ekNDQWMrZ0F3SUJBZ0lCQURBTkJna3Foa2lHOXcwQkFRc0ZBREFWTVJNd0VRWURWUVFERXdwcmRXSmwKY201bGRHVnpNQjRYRFRJeU1ETXhNakV3TXpRMU9Wb1hEVE15TURNd09URXdNelExT1Zvd0ZURVRNQkVHQTFVRQpBeE1LYTNWaVpYSnVaWFJsY3pDQ0FTSXdEUVlKS29aSWh2Y05BUUVCQlFBRGdnRVBBRENDQVFvQ2dnRUJBTDZuCjN3VmYyM0ZycTI3b25aVUJWYXZqMlVjQWxMNFVtd0FWSVJVK00rYms2dUxDQi9DSENhWWN1LzRVV0xNbFM3aUUKRzZHc3VqaE15ZWtTZlIxS2dHVEZMTDVqT2tUN3R1MzFPTXptMy81aldCYXQydWJ1Y2hMd24xN0RPTEQ0UnNyeAoydDRQYSs0bnNmWVIzZ2x1T01FVzBRVHZ1YTR2T3RxNHBhU29WYjJmU1J2bVVpTEhIaDlVT0NyN2JMT245TCtHCm95eUJFd2ROeUI2OUROU3ZHQytwUko3Y2N2eEFpZDZQazlzOEYrL0VoRlUwaGh3K2pvWGhCclcwMndVVGxIbTYKMVJIanRkTGRwK1Q0YXNMNDVSSi90cFQ1OVNoWXEraTEyNkZneHhpNFI2QkJxTnA0Rk5WeDBEd2tYL1pHMERWQgp6YXhFYytLcnovbG9va3FVMCtFQ0F3RUFBYU5DTUVBd0RnWURWUjBQQVFIL0JBUURBZ0trTUE4R0ExVWRFd0VCCi93UUZNQU1CQWY4d0hRWURWUjBPQkJZRUZBNHU2Yy9lWTRlK3JPOUh1eTloWlFmVm1EcjNNQTBHQ1NxR1NJYjMKRFFFQkN3VUFBNElCQVFCUEFEZ0xEUkpmVEtkbXdhcFo2c2lIMFFWcFFQeVBoVkFEZHVqeE9hb05MS2ZjRFdKYgpEL29OTTBoV28xdEZzUG5WSkU3amw5SUpkUnFFWGtERUJ6eW1NYWlHcmVZalZnNFlQTkNFQVhtUVJtR2NORVVTClRjOEJCcjBJdFBZWXhDYWxjcnVXNnlqQmhNZjNGNHZmOS9HRDBtZUNVYlF2UmN4Ui8xSlhuZDVwUElsTHFQbTQKcVJqVlFqdGI1Tm9uTnYwemRzZ2JtWkNpY2duZHFuUjg0a3RRekRXZURzMEtqVVlUelJuZHo3cTVLRVZLRHhNdwpxS2ZzdU5Ia1VPL0xMOVZHTnB6S2UrSHFpQ2kwZEFDS2FuR0hYUnJ5Uld3a3B1THRrVnBYVmVlOFkwR0NUTDIzCmVwTVRWbHExQU9BcUZ4VVdSeEZCTGhFcFY0enpLMGw3U2dpegotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==\n" +
+                "    server: https://192.168.50.240:6443\n" +
+                "  name: local\n" +
+                "contexts:\n" +
+                "- context:\n" +
+                "    cluster: local\n" +
+                "    namespace: default\n" +
+                "    user: admin\n" +
+                "  name: admin@local\n" +
+                "current-context: admin@local\n" +
+                "kind: Config\n" +
+                "preferences: {}\n" +
+                "users:\n" +
+                "- name: admin\n" +
+                "  user:\n" +
+                "    client-certificate-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURCVENDQWUyZ0F3SUJBZ0lRS1lWTExzdk9sb2hZZlc0QkxBSnVtekFOQmdrcWhraUc5dzBCQVFzRkFEQVYKTVJNd0VRWURWUVFERXdwcmRXSmxjbTVsZEdWek1CNFhEVEl5TURNeE1qRXdNelF3TmxvWERUTXlNRE13T1RFdwpNelF3Tmxvd0VERU9NQXdHQTFVRUF4TUZZV1J0YVc0d2dnRWlNQTBHQ1NxR1NJYjNEUUVCQVFVQUE0SUJEd0F3CmdnRUtBb0lCQVFEYytaaXNCYlg1RHBnZThnM0g1UTI5czUwY2xXTkhtelhiNkQvT2VtK0MvK2tjK1hBTWVFekYKV3hSL3RKSnMwOTdmem9jQUlYVFhORGRyU2MzcnZtRzZmN1lXUlVyMWUwMll1MGdqdnNhNGZmYTJoaFlSaWEzOAovbjh5Y3hubEMzNDJncnlURUhDZE4vRmV3R3RwdWswaW9uazE5ZGlSUEp4UXJpSFlId1JRcUF0Z1VwSVdUNVJvClAzNitCODhDNm16dkl6U3dmWXB0NHIxbEkzSG1HRTNtcmg2WFloTUFJSngzTGJTRUlhMnhZNFVCK3RmNERndEwKTWJlRmQ1SGJhVXgvcDRtU1E3OUxoc21yNnFEWEZjeU1wOHRrMzBOVStWYWk0WjQ4YVVhRVpJTVBLQW5JVmtISAp3YnBXYllVN3huMXVVMlhKbGR3L3lZU3BIcUZOVUVYSkFnTUJBQUdqVmpCVU1BNEdBMVVkRHdFQi93UUVBd0lGCm9EQVRCZ05WSFNVRUREQUtCZ2dyQmdFRkJRY0RBakFNQmdOVkhSTUJBZjhFQWpBQU1COEdBMVVkSXdRWU1CYUEKRkE0dTZjL2VZNGUrck85SHV5OWhaUWZWbURyM01BMEdDU3FHU0liM0RRRUJDd1VBQTRJQkFRQzJUWm1kWVVaRQp6QVVWVG5XY0ppZEpOWjlBVUtpVzhUcDBVOEVCQzdwRWsrdjBwWW1KQVp2UWFNQk9SRUdUQWtHVFF4Mm05Q2YzCkRXS2ZBaFZQNmpLWGJyeWNta2JqWjJjYnludHVUams1ZldmSDRtVkRIWHcxbXh1NUpBY1REN01LdnBPTXFZaDcKcC9XcC9uaFZmOUR1ak5WbGo5TSt4SXJOdDFZSjcreFBEaHZVQ0hWeDNyMHNLZGc2UXVSZXYyeGdlYkM3RStNKwpLNm9QOGFLOVVoR3dlUUE2ZmZDVDVCMERzYmZOUFBwRXpGbWk3MjVuckY3SFNaRXgxSWNaV1U1SHZPTEo3T0ZoClhWK2xqTEpVL0FVaGdqZUVvSGxmd0lpK2tyZnQyb1ZsMmVSMzFLVVBpc0cyYmhNd0xPeVc3Q2I0ekczK2JyOUYKdTViNHFmZCt0S0EvCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K\n" +
+                "    client-key-data: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUVwQUlCQUFLQ0FRRUEzUG1ZckFXMStRNllIdklOeCtVTnZiT2RISlZqUjVzMTIrZy96bnB2Z3YvcEhQbHcKREhoTXhWc1VmN1NTYk5QZTM4NkhBQ0YwMXpRM2Ewbk42NzVodW4rMkZrVks5WHRObUx0SUk3N0d1SDMydG9ZVwpFWW10L1A1L01uTVo1UXQrTm9LOGt4QnduVGZ4WHNCcmFicE5JcUo1TmZYWWtUeWNVSzRoMkI4RVVLZ0xZRktTCkZrK1VhRDkrdmdmUEF1cHM3eU0wc0gyS2JlSzlaU054NWhoTjVxNGVsMklUQUNDY2R5MjBoQ0d0c1dPRkFmclgKK0E0TFN6RzNoWGVSMjJsTWY2ZUpra08vUzRiSnErcWcxeFhNaktmTFpOOURWUGxXb3VHZVBHbEdoR1NERHlnSgp5RlpCeDhHNlZtMkZPOFo5YmxObHlaWGNQOG1FcVI2aFRWQkZ5UUlEQVFBQkFvSUJBUUN6MEFNMUQ5eVpFeEFrCk5sR1NkTWd1c3NiSktLTEY5UDNwdVY2YWxUVENnNTNjcnZsSG5HalVPNTQ5b09GNTN4cEFRbDNHZEhNUVgzUXQKUUx4bzlkMnVsaGZFblpRMmw2UjRBUVhkMkhMNlU3MzducmE4aEsxbzdtcncwWXFqd0N0dkRnbUhIbHlWQXAzTgp2WVJxWDJnL0k3akFlUkpHZE95NkZraUNCaE5MMFQ5WlRzTVI3a2ZaRlRNdk5yK3owcWZLRGx1cFdicVJWdjczCkkwODkyL1B2R3dzUTNuRW5GakR1WGZkRjluc3F1K0RtRTRvK2EvSzJ5MStUUHdxR1ZNQ1Fvc1hUbHpxMWlISmkKd1FKcEJ0Z3RkMmxzZEtZbUJuY0QrZFlabEZXVGVJUENKVDdHN2YxeGduaEoyUFhrMFN6NGc0WCsxMDJWY0tSeAp3MzgwRXVzRkFvR0JBT2NJRVpzS3hNZEtNcmRkS0o4a3dSWEdOTENmZTVkeHpkYUVRNHU3T1l1RTR6OWY2Q0Z5Cm8vTEFvTnE4NGlydDNGWG54c25NZythbTRiVGZ5ekxBdDJLbEFpMkg2dFR2eTkzR2tuYUJuVmRLMDRVUk4zQjUKazVPVUJsU1FRN3ZERmlPYWdjNW9STG9yb0Jsa3ZTVmE4YkdOd1N5RjVGWGRxSnc5M3M0UGlaRWJBb0dCQVBUYgpTMVk3eGxzZTZ5YWJSMHNmSnZuSjlJMGovSW9kYzRWWkp1QTIwN1cxYk1zRzFPQ1Rjb2kyYUJ3NGlkbFk3aTJaCm5QblhNaU1OM1BQcjRFWkFPUnkzbDRTTjBMb1o1RjVSSjRxYkF6ZVZ4Vkp3VlM2YWlCMEQ1ZVE0RVBzdm0rd04KRmZFeTVLTzFmejMzMTRTbFA1c28yU2xTRWJhT2RFcU5KbU5YYTFickFvR0FYbjhvWkZnMVFLYVNzL21Bd2dkUQppczExZzhEWDFvd1ArMnhDRElkWjlEMDRqaFYyWnlmeTh6bmpFVlVzMVE1Ump6bXNUNkk5V1R4dEdZUm9JcXc4CjFqWlQrN2VhVDlwOWNvcmtJV0RHc0l2RWxLc0VHQmRDUzV6Q01oaUgrK2JCeVhKTElkZjROSVhmaUVOeU1qTk8KcEtjc21qOXhzOFZrVC9QbWpEWkN1SDBDZ1lBSENRSDZJVStLc0xHNjh6MHlLRnY3VTFVbWRRRTlpcWtXRE1DMApNbjhVdW5pOHdKNS9NVjFhRmp1WmkvcFI5MThvaWtCYllWWjhjVnFHMjZFZkE1dGdldG5zb2hKOE5tQThZWUtNClZmWGFzLy91WlhIZEcrMkxQK0JzRlR4UHEwZUVtYittcFhxeVJYVzVkeFNIS0NSU3RmSy9ZQzlJR29HMjNxVmEKdDFsTEx3S0JnUUNpZmVjS1I5a0tCalZ1cm5jeUN1OENZRWM1ZmZjZ2tRRVlzYno4eW1GcDNxZGlnT3hGc1N1WApqMCtQejBJOXgrc2FQckVSVmtmNFFvbHZhMk1zNjdoMS8vM0pXL2FJZ3Jab3NSOU1acHAxVG9IQXBEQTBkek1rCjUzZi9JUndwa3NRTmwza1N4Zmh4R3daMzlsR28vWDlNeDBYem9CbXM1Vmc1RFJkYml6RUxSZz09Ci0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K\n";
+        var config = Config.fromKubeconfig(KubeConfigContent);
+        // 命名空间必须是小写
+        String namespaceStr = "k8stest-name-space";
+        try (final KubernetesClient client = new DefaultKubernetesClient(config)) {
+
+            // 如果 NameSpace 不存在创建一个，否则直接显示
+            var r_ns = client.namespaces().withName(namespaceStr);
+            if (r_ns.get() == null) {
+                Namespace ns = new NamespaceBuilder().withNewMetadata().withName(namespaceStr).endMetadata().build();
+                System.out.println(r_ns.create(ns));
+            }
+            var ns = r_ns.get();
+            System.out.println("NameSpace:" + ns.getMetadata().toString());
+            // pod 部署 nginx:1.21.0
+            Deployment deployment = new DeploymentBuilder()
+                    .withNewMetadata()
+                    .withName("nginx-deployment")
+                    .endMetadata()
+                    .withNewSpec()
+                    .withReplicas(1)
+                    .withNewTemplate()
+                    .withNewMetadata()
+                    .addToLabels("app", "nginx")
+                    .endMetadata()
+                    .withNewSpec()
+                    .addNewContainer()
+                    .withName("nginx")
+                    .withImage("nginx:1.21.0")
+                    .addNewPort()
+                    .withContainerPort(80)
+                    .endPort()
+                    // .addNewCommand("")
+                    // .addNewArg("")
+                    .endContainer()
+                    .endSpec()
+                    .endTemplate()
+                    .withNewSelector()
+                    .addToMatchLabels("app", "nginx")
+                    .endSelector()
+                    .endSpec()
+                    .build();
+
+            var deploymentIns = client.apps().deployments().inNamespace(namespaceStr).withName("nginx-deployment");
+            if (deploymentIns.get() == null) {
+                System.out.println("Deployment[nginx-deployment]: Not exist, create it.");
+                deployment = client.apps().deployments().inNamespace(namespaceStr).create(deployment);
+                System.out.println("Created deployment: " + deployment);
+                System.out.println("Scaling up: " + deployment.getMetadata().getName());
+            }
+
+            boolean isReadyService = false;
+            while (!isReadyService) {
+                var pods = client.pods().inNamespace(namespaceStr).withLabel("app", "nginx").list().getItems();
+                for (var pod : pods) {
+                    String podName = pod.getMetadata().getName();
+                    boolean r = client.pods().inNamespace(namespaceStr).withName(podName).isReady();
+                    if (!r) {
+                        isReadyService = false;
+                        break;
+                    }
+                    isReadyService = true;
+                }
+            }
+
+            if (deployment.getStatus() != null) {
+                System.out.println("Deployment[nginx-deployment] AvailableReplicas: " + deployment.getStatus().getAvailableReplicas());
+            }
+            System.out.println("Deployment[nginx-deployment] Replicas: " + deployment.getSpec().getReplicas());
+
+            // 扩展 pod 实例
+            deploymentIns.scale(2, true);
+            System.out.println("Created replica sets: " + client.apps().replicaSets().inNamespace(namespaceStr).list().getItems());
+            while (deployment.getSpec().getReplicas() != 2) {
+                if (deployment.getStatus() != null) {
+                    System.out.println("Deployment[nginx-deployment] AvailableReplicas: " + deployment.getStatus().getAvailableReplicas());
+                    System.out.println("Deployment[nginx-deployment] Replicas: " + deployment.getSpec().getReplicas());
+                }
+                ThreadHelper.sleep(3000);
+                deployment = deploymentIns.get();
+            }
+
+
+            // pod to Service
+            Service serviceTpl = new ServiceBuilder()
+                    .withNewMetadata()
+                    .withName("nginx-deployment")
+                    .endMetadata()
+                    .withNewSpec()
+                    .withPorts(
+                            new ServicePortBuilder().withName("nginx30080").withPort(80).withProtocol("TCP").withTargetPort(new IntOrString(80)).build()
+                    )
+                    .withSelector(JSONObject.build("app", "nginx").toHashMap())
+                    // .withType("NodePort")
+                    .withType("ClusterIP")
+                    .endSpec()
+                    .build();
+
+            Service service = client.services().inNamespace(namespaceStr).withName("nginx-deployment").get();
+            if (service == null) {
+                System.out.println("Service[nginx-deployment]: Not exist, create it.");
+                service = client.services().inNamespace(namespaceStr).create(serviceTpl);
+                System.out.println("Created Service: " + service);
+            }
+
+            var sStatus = service.getStatus();
+            System.out.println(sStatus);
+            System.out.println("ClusterIP:" + service.getSpec().getClusterIP() + ":" + service.getSpec().getPorts().get(0).getPort());
+
+            // ingress 配置
+            // String ingressName = "ingress-nginx";
+            Ingress ingressTpl = new IngressBuilder()
+                    .withNewMetadata()
+                    .withName("ingress-nginx-k8stest")
+                    .withNamespace(namespaceStr)
+                    .endMetadata()
+                    .withNewSpec()
+                    .withIngressClassName("nginx")
+                    .addNewRule()
+                    .withHost("ingress.k8stest.com")
+                    .withNewHttp()
+                    .addNewPath()
+                    .withPath("/")
+                    // .withPathType("Exact")
+                    .withPathType("Prefix")
+                    .withNewBackend()
+                    .withService(new IngressServiceBackend("nginx-deployment", new ServiceBackendPortBuilder().withNumber(80).build()))
+                    .endBackend()
+                    .endPath()
+                    .endHttp()
+                    .endRule()
+                    .endSpec()
+                    .build();
+            // ingress = client.network().ingress() .extensions().ingresses().inNamespace(ingressName).create(ingress);
+            Ingress ingress = client.network().v1().ingresses().inNamespace(namespaceStr).withName("ingress-nginx-k8stest").get();
+            if (ingress == null) {
+                System.out.println("Ingress[ingress-nginx]: Not exist, create it.");
+                ingress = client.network().v1().ingresses().inNamespace(namespaceStr).create(ingressTpl);
+                System.out.println("Created Ingress: " + ingress);
+            }
+            // 等待 60 秒
+            // ThreadHelper.sleep(60 * 1000);
+            client.pods().inNamespace(namespaceStr).list().getItems().forEach(pod -> {
+                        var t = TimeHelper.build().dateTimeToTimestamp(pod.getStatus().getStartTime(), "yyyy-MM-dd'T'HH:mm:ssz");
+                        System.out.println("Pod: " + pod.getMetadata().getName() + " started at " + TimeHelper.build().timestampToDatetime(t));
+                    }
+            );
+
+            // 滚动更新 nginx-deployment => nginx:1.17.0
+            deployment = client.apps().deployments().inNamespace(namespaceStr)
+                    .withName("nginx-deployment")
+                    .rolling()
+                    .withTimeout(60, TimeUnit.MINUTES)
+                    .updateImage("nginx:1.17.0")
+            ;
+            System.out.println("Rolling Updated deployment: " + deployment);
+
+            // 版本回滚
+            deployment = client.apps().deployments().inNamespace(namespaceStr).withName("nginx-deployment").rolling().undo();
+
+            System.out.println("Rollback Deployment 1st:" + deployment.getStatus());
+
+            // 测试 secret
+            JSONObject data = new JSONObject();
+            // data.put("docker-server", "core.harbor.domain:30002");
+            data.put("username", "admin");
+            data.put("password", "Harbor12345");
+            data.put("email", "");
+            JSONObject auth = new JSONObject();
+            auth.put("core.harbor.domain:30002", data);
+            JSONObject auths = new JSONObject();
+            auths.put("auths", auth);
+            var dockerConfigJson = Base64.encode(auths.toString());
+            Map<String, String> dockerConfig = new HashMap<>();
+            System.out.println(dockerConfigJson);
+            dockerConfig.put(".dockerconfigjson", dockerConfigJson);
+            final Secret secret = new SecretBuilder()
+                    .withNewMetadata()
+                    .withName(namespaceStr + "-registry")
+                    .endMetadata()
+                    .withType("kubernetes.io/dockerconfigjson")
+                    .withImmutable(false)
+                    .addToData(dockerConfig)
+                    .build();
+            Secret secretCreated = client.secrets().inNamespace(namespaceStr).createOrReplace(secret);
+            System.out.println("Newly created Secret details:\n " + secretCreated);
+
+            // 删除 secret
+            client.secrets().inNamespace(namespaceStr).withName(namespaceStr + "-registry").delete();
+
+            // 删除 ingress
+            System.out.println("Deleting Ingress: " + ingress.getMetadata().getName() +
+                    // " Status" + client.resource(ingress).inNamespace(namespaceStr).delete());
+                    " Status" + client.network().v1().ingresses().inNamespace(namespaceStr).withName(ingress.getMetadata().getName()).delete());
+            // 删除 服务
+            System.out.println("Deleting Service: " + service.getMetadata().getName() +
+                    // " Status" + client.resource(service).inNamespace(namespaceStr).delete());
+                    " Status" + client.services().inNamespace(namespaceStr).withName(service.getMetadata().getName()).delete());
+            // 删除 部署
+            System.out.println("Deleting Deployment: " + deployment.getMetadata().getName() +
+                    // " Status" + client.resource(deployment).inNamespace(namespaceStr).delete());
+                    " Status" + client.apps().deployments().inNamespace(namespaceStr).withName(deployment.getMetadata().getName()).delete());
+            // 删除 NameSpace;
+            System.out.println("Delete NameSpace:" + r_ns.delete());
+
+        } catch (Exception e) {
+            System.err.println(e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}
