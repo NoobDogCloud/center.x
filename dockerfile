@@ -1,4 +1,4 @@
-FROM openjdk:19-jdk-alpine3.16
+FROM openjdk:21-jdk-bullseye
 COPY install.json /home/app/
 COPY gfw.cfg /home/app/
 COPY ./target/#{f} /home/app/
