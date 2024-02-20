@@ -55,7 +55,7 @@ public class Apps extends ApplicationTemplate {
         // 生成唯一 appId
         String uniqueId;
         do {
-            uniqueId = StringHelper.createRandomCode(32 + Random.getRandom(8, 32));
+            uniqueId = StringHelper.createRandomCode(2 + Random.getRandom(2, 6));
         } while (!JSONObject.isInvalided(getDb().eq("id", uniqueId).find()));
         nObj.put("id", uniqueId);
         // 创建应用

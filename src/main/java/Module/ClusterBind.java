@@ -1,6 +1,6 @@
 package main.java.Module;
 
-import main.java.Api.Cluster;
+import db.service.BaseTemplate;
 import org.json.gsc.JSONArray;
 import org.json.gsc.JSONObject;
 
@@ -13,7 +13,7 @@ public class ClusterBind {
     }
 
     public static JSONObject getInfo(int id) {
-        var db = (new Cluster()).getDb();
+        var db = (new BaseTemplate("k8s")).getDb();// (new Cluster()).getDb();
         return db.eq(db.getGeneratedKeys(), id).find();
     }
 
@@ -23,13 +23,13 @@ public class ClusterBind {
             return false;
         }
         var keys = info.getNeField(newInfo);
-        if (keys.size() == 0) {
+        if (keys.isEmpty()) {
             return false;
         }
 
         if (keys.contains("config") || keys.contains("registry")) {
             var appArr = AppsBind.getInfoByClusterId(id);
-            if (appArr.size() > 0) {
+            if (!appArr.isEmpty()) {
                 var appsBind = AppsBind.build();
                 for (var app : appArr) {
                     // 集群授权配置信息更新

@@ -12,10 +12,23 @@ import main.java.Api.ServicesDeploy;
 import org.json.gsc.JSONArray;
 import org.json.gsc.JSONObject;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 
 public class ConfigModel {
+    public static HashMap<String, String> middlewareTypeMap = new HashMap<>() {{
+        put("mongodb", "db");
+        put("mysql", "db");
+        put("h2", "db");
+        put("oracle", "db");
+        put("redis", "cache");
+        put("pulsar", "mq");
+        put("rabbitmq", "mq");
+        put("kafka", "mq");
+        put("activemq", "mq");
+    }};
+
     // 根据配置分类定义获得有效配置信息
     public static JSONObject getConfigVal(JSONObject info) {
         JSONObject r = JSONObject.build();

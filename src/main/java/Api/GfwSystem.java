@@ -22,7 +22,7 @@ public class GfwSystem {
         if (files.size() != 1) {
             return RpcMessage.Instant(false, "请上传一个备份文件");
         }
-        var file = files.get(0);
+        var file = files.getFirst();
         DBLayer db = DBLayer.buildWithConfig(DbConfig.getConfig().toString());
         DBManager.getInstance(db).doImport(file.getFileInfo().getLocalFile());
         return true;

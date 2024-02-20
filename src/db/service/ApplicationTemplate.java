@@ -3,65 +3,41 @@ package db.service;
 import common.java.Database.DBLayer;
 import common.java.InterfaceModel.Type.InterfaceType;
 import common.java.Rpc.RpcPageInfo;
+import common.java.Session.UserSession;
 import org.json.gsc.JSONArray;
 import org.json.gsc.JSONObject;
 
 import java.util.function.Function;
 
-public class ApplicationTemplate {
-    private fastDBService fdb;
+public class ApplicationTemplate extends BaseTemplate{
+    private final String userId;
 
     public ApplicationTemplate(String tableName) {
-        init(tableName);
-    }
-
-    @InterfaceType(InterfaceType.type.CloseApi)
-    public void init(String tableName) {
-        fdb = new fastDBService(tableName, null);
-    }
-
-    @InterfaceType(InterfaceType.type.CloseApi)
-    public DBLayer getDb() {
-        return fdb._getDB();
-    }
-
-    public JSONArray select() {
-        return fdb.select();
-    }
-
-    public JSONArray selectEx(JSONArray cond) {
-        return fdb.selectEx(cond);
-    }
-
-    public RpcPageInfo page(int idx, int max) {
-        return fdb.page(idx, max);
-    }
-
-    public RpcPageInfo pageEx(int idx, int max, JSONArray cond) {
-        return fdb.pageEx(idx, max, cond);
+        super(tableName);
+        UserSession session = UserSession.current();
+        if (!session.checkSession()) {
+            throw new RuntimeException("用户未登录");
+        }
+        this.userId = session.getUID();
+        super.fdb._getDB().addConstantCond("userid", this.userId);
     }
 
     public boolean update(String uids, JSONObject info) {
+        if( info.has("userid") ){
+            throw new RuntimeException("非法操作!");
+        }
         return fdb.update(uids, info);
     }
 
-    public boolean delete(String uids) {
-        return fdb.delete(uids);
-    }
-
     public Object insert(JSONObject nObj) {
+        // 强制添加 userid
+        nObj.put("userid", this.userId);
         return fdb.insert(nObj);
     }
 
     protected boolean insertOrRollback(JSONObject nObj, Function<Object, Boolean> func) {
+        // 强制添加 userid
+        nObj.put("userid", this.userId);
         return fdb.insertOrRollback(nObj, func);
-    }
-
-    public JSONObject find(Object id) {
-        return fdb.find(id);
-    }
-
-    public JSONObject find(String key, Object id) {
-        return fdb.find(key, id);
     }
 }

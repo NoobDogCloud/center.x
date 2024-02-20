@@ -3,13 +3,11 @@ package main.java.Module;
 import common.java.GscCommon.CheckModel;
 import common.java.Time.TimeHelper;
 import common.java.nLogger.nLogger;
+import db.service.BaseTemplate;
 import io.fabric8.kubernetes.api.model.Namespace;
 import io.fabric8.kubernetes.api.model.NamespaceBuilder;
 import io.fabric8.kubernetes.api.model.SecretBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import main.java.Api.Apps;
-import main.java.Api.Services;
-import main.java.Api.ServicesDeploy;
 import model.deploySystem.KubeSecretDockerConfigJson;
 import model.deploySystem.KubernetesHandle;
 import org.json.gsc.JSONArray;
@@ -34,12 +32,12 @@ public class AppsBind {
     }
 
     public static JSONObject getInfo(String id) {
-        var db = (new Apps()).getDb();
+        var db = (new BaseTemplate("apps")).getDb();
         return db.eq(db.getGeneratedKeys(), id).find();
     }
 
     public static JSONArray<JSONObject> getInfoByClusterId(int clusterId) {
-        var db = (new Apps()).getDb();
+        var db = (new BaseTemplate("apps")).getDb();
         return db.eq("k8s", clusterId).select();
     }
 
@@ -359,16 +357,16 @@ public class AppsBind {
         // 获得发布模式(对应模式服务名称)
         String publishMode = appInfo.getString("category");
         ServicesDeployBind sdb = ServicesDeployBind.build();
-        var s = new Services();
+        var s = (new BaseTemplate("services")).getDb();// new Services();
         int serviceId = -1;
         JSONArray nodeInfo = JSONArray.build();
         // 查看是否已存在发布服务部署
-        var d = new ServicesDeploy();
-        var d_db = d.getDb();
+        var d = (new BaseTemplate("servicesDeploy")).getDb();// new ServicesDeploy();
+        // var d_db = d.getDb();
         String appId = appInfo.getString("id");
         // 有效的网关服务名称
-        if (publishMode.length() > 0) {
-            JSONObject serviceInfo = s.find("name", publishMode);
+        if (!publishMode.isEmpty()) {
+            JSONObject serviceInfo = s.eq("name", publishMode).find();
             if (JSONObject.isInvalided(serviceInfo)) {
                 // 发布服务不存在
                 nLogger.errorInfo("发布服务不存在");
@@ -378,7 +376,7 @@ public class AppsBind {
             // 获得获得对应发布网关服务信息
             JSONObject deployInfo;
             do {
-                deployInfo = d_db.eq("appid", appId).eq("serviceid", serviceId).find();
+                deployInfo = d.eq("appid", appId).eq("serviceid", serviceId).find();
                 if (JSONObject.isInvalided(deployInfo)) {
                     // 动态部署对应服务
                     JSONObject deployGateway = JSONObject.build()
@@ -397,7 +395,9 @@ public class AppsBind {
                             .put("clusteraddr", "")
                             .put("proxy_target", JSONArray.<String>build())
                             .put("subaddr", "");
-                    if (!(d.insert(deployGateway) instanceof Boolean)) {
+                    var l = d.data(deployGateway).insert();
+
+                    if (l.isEmpty()) {
                         // 动态部署失败
                         errorMessage = "动态部署服务失败";
                         return null;
@@ -409,8 +409,8 @@ public class AppsBind {
                 errorMessage = "获得部署服务连接信息失败";
                 return null;
             }
-            var pkv = deployInfo.get(d.getDb().getGeneratedKeys());
-            JSONObject result = d.find(pkv);
+            var pkv = deployInfo.get(d.getGeneratedKeys());
+            JSONObject result = d.eq(d.getGeneratedKeys(), pkv).find();
             if (JSONObject.isInvalided(result)) {
                 errorMessage = "获得新部署服务异常";
                 return null;
@@ -421,16 +421,16 @@ public class AppsBind {
 
         // 删除原有网关服务(使用无效的网关会导致删除全部网关服务)
         int finalServiceId = serviceId;
-        var api_sdp = new ServicesDeploy();
-        s.getDb().eq("category", "gateway").scan(arr -> {
+        var api_sdp = (new BaseTemplate("servicesDeploy")).getDb();// new ServicesDeploy();
+        s.eq("category", "gateway").scan(arr -> {
             for (JSONObject item : arr) {
                 int sId = item.getInt("id");
                 if (sId != finalServiceId) {
                     // 获得当前应用对应网关的部署实例
-                    JSONObject deployInfo = d_db.eq("appid", appId).eq("serviceid", sId).find();
+                    JSONObject deployInfo = d.eq("appid", appId).eq("serviceid", sId).find();
                     if (!JSONObject.isInvalided(deployInfo)) {
                         String deployId = deployInfo.getString("id");
-                        api_sdp.delete(deployId);
+                        api_sdp.eq(api_sdp.getGeneratedKeys(), deployId).delete();
                     }
                 }
             }
@@ -475,8 +475,7 @@ public class AppsBind {
         if (user_service_id == 0) {
             return true;
         }
-        var service = new Services();
-        var serviceDb = service.getDb();
+        var serviceDb = (new BaseTemplate("services")).getDb();// new Services();
         // 判断应用绑定的服务是否有效
         JSONObject serviceInfo = serviceDb.eq("id", user_service_id).find();
         if (JSONObject.isInvalided(serviceInfo)) {
@@ -485,8 +484,7 @@ public class AppsBind {
         }
 
         String user_service_name = serviceInfo.getString("name") + "-" + "user-service";
-        var servicesDeploy = new ServicesDeploy();
-        var servicesDeployDb = servicesDeploy.getDb();
+        var servicesDeployDb = (new BaseTemplate("servicesDeploy")).getDb();
         // 判断当前服务部署实例是否已存在
         JSONObject deployInfo = servicesDeployDb.eq("name", user_service_name).eq("appid", appId).find();
         if (JSONObject.isInvalided(deployInfo)) {
@@ -510,9 +508,10 @@ public class AppsBind {
                     .put("proxy_target", JSONArray.<String>build())
                     .put("subaddr", "");
             deployUser.put(servicePreInfo);
-            if (!(servicesDeploy.insert(deployUser) instanceof Boolean)) {
+            var l = servicesDeployDb.data(deployUser).insert();
+            if(l.isEmpty()){
                 // 动态部署失败
-                nLogger.errorInfo("动态绑定用户服务失败");
+                errorMessage = "动态绑定用户服务失败";
                 return false;
             }
         }

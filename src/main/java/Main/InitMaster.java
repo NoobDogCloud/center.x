@@ -1,6 +1,7 @@
 package main.java.Main;
 
 import common.java.String.StringHelper;
+import db.service.BaseTemplate;
 import io.fabric8.kubernetes.api.model.Service;
 import main.java.Api.Apps;
 import main.java.Api.ServicesDeploy;
@@ -21,8 +22,8 @@ public class InitMaster {
     }
 
     private static void InitApp() {
-        var db = (new Apps()).getDb();
-        var svr_db = (new ServicesDeploy()).getDb();
+        var db = (new BaseTemplate("apps")).getDb();
+        var svr_db = (new BaseTemplate("servicesDeploy")).getDb();// (new ServicesDeploy()).getDb();
         var servicesBind = ServicesBind.build();
         var servicesDeployBind = ServicesDeployBind.build();
         var appsBind = AppsBind.build();
@@ -50,7 +51,7 @@ public class InitMaster {
 
     private static void InitService() {
         // 为每个部署维持一个环境
-        var db = (new ServicesDeploy()).getDb();
+        var db = (new BaseTemplate("servicesDeploy")).getDb();// (new ServicesDeploy()).getDb();
         var servicesDeployBind = ServicesDeployBind.build();
         db.eq("container", 1).scan(resultBlock -> {
             for (JSONObject block : resultBlock) {

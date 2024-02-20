@@ -4,6 +4,7 @@ import common.java.String.StringHelper;
 import common.java.Thread.ThreadHelper;
 import common.java.Time.TimerHelper;
 import common.java.nLogger.nLogger;
+import db.service.BaseTemplate;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.ServiceBuilder;
@@ -11,7 +12,6 @@ import io.fabric8.kubernetes.api.model.ServicePortBuilder;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.api.model.apps.DeploymentBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import main.java.Api.ServicesDeploy;
 import model.deploySystem.KubernetesHandle;
 import org.json.gsc.JSONArray;
 import org.json.gsc.JSONObject;
@@ -36,17 +36,17 @@ public class ServicesDeployBind {
     }
 
     public static JSONObject getInfo(int id) {
-        var db = (new ServicesDeploy()).getDb();
+        var db = (new BaseTemplate("servicesDeploy")).getDb();
         return db.eq(db.getGeneratedKeys(), id).find();
     }
 
     public static JSONArray<JSONObject> getInfoByAppID(String id) {
-        var db = (new ServicesDeploy()).getDb();
+        var db = (new BaseTemplate("servicesDeploy")).getDb();
         return db.eq("appid", id).select();
     }
 
     public static JSONArray<JSONObject> getInfoByServiceID(int id) {
-        var db = (new ServicesDeploy()).getDb();
+        var db = (new BaseTemplate("servicesDeploy")).getDb();
         return db.eq("serviceid", id).select();
     }
 
@@ -126,7 +126,7 @@ public class ServicesDeployBind {
             }
             default -> updateInfo.put("subaddr", "");
         }
-        var deploy_db = (new ServicesDeploy()).getDb();
+        var deploy_db = (new BaseTemplate("servicesDeploy")).getDb();
         return deploy_db.eq("name", deployInfo.getString("name")).data(updateInfo).update();
     }
 

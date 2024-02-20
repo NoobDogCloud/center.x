@@ -4,10 +4,11 @@ import common.java.Database.DBLayer;
 import common.java.Rpc.RpcMessage;
 import common.java.String.StringHelper;
 import db.service.ApplicationTemplate;
+import db.service.BaseTemplate;
 import model.UserModel;
 import org.json.gsc.JSONObject;
 
-public class Users extends ApplicationTemplate {
+public class Users extends BaseTemplate {
     public Users() {
         super("users");
     }
@@ -33,7 +34,7 @@ public class Users extends ApplicationTemplate {
         if (JSONObject.isInvalided(userInfo)) {
             return RpcMessage.Instant(false, "当前用户不存在!");
         }
-        return UserModel.buildJWT(userInfo, userInfo.getString("salt"));
+        return UserModel.buildJWT(userId, userInfo, userInfo.getString("salt"));
     }
 
     // 修改密码(需要重新登录)
@@ -67,7 +68,7 @@ public class Users extends ApplicationTemplate {
             return RpcMessage.Instant(false, "密码错误!");
         }
         JSONObject safeUserInfo = UserModel.filterUserInfo(userInfo);
-        return safeUserInfo.put("token", UserModel.buildJWT(safeUserInfo, userInfo.getString("salt")));
+        return safeUserInfo.put("token", UserModel.buildJWT(userId, safeUserInfo, userInfo.getString("salt")));
     }
 
     // 登出

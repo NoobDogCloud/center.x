@@ -111,7 +111,12 @@ public class fastDBService {
 			if (!JSONArray.isInvalided(conds)) {
 				db.where(conds);
 			}
-			rj = db.dirty().desc(db.getGeneratedKeys()).page(idx, max);
+			db.dirty();
+			String pk = db.getGeneratedKeys();
+			if( pk != null && !pk.isEmpty()){
+				db.desc(pk);
+			}
+			rj = db.page(idx, max);
 			// count = db.pageMax(max);
 			count = db.count();
 		}
@@ -133,7 +138,7 @@ public class fastDBService {
 				rj = db.insert();
 			}
 		}
-		return (rj != null && rj.size() > 0);
+		return (rj != null && !rj.isEmpty());
 	}
 
 	public boolean update(String ids, JSONObject data) {

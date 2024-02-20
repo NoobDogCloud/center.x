@@ -1,9 +1,9 @@
 package main.java.Module;
 
 import common.java.String.StringHelper;
+import db.service.BaseTemplate;
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import main.java.Api.Services;
 import model.deploySystem.KubernetesHandle;
 import org.json.gsc.JSONArray;
 import org.json.gsc.JSONObject;
@@ -22,7 +22,7 @@ public class ServicesBind {
     }
 
     public static JSONObject getInfo(int id) {
-        var db = (new Services()).getDb();
+        var db = (new BaseTemplate("services")).getDb();;
         return db.eq(db.getGeneratedKeys(), id).find();
     }
 
@@ -32,7 +32,7 @@ public class ServicesBind {
             return false;
         }
         JSONArray<String> keys = info.getNeField(newInfo);
-        if (keys.size() == 0) {
+        if (keys.isEmpty()) {
             return true;
         }
         // 修改 service 敏感字段会触发 service 的更新
@@ -46,7 +46,7 @@ public class ServicesBind {
         info.put(newInfo);
         // 获得所有该服务的部署
         var deploys = ServicesDeployBind.getInfoByServiceID(id);
-        if (deploys.size() > 0) {
+        if (!deploys.isEmpty()) {
             var servicesDeployBind = ServicesDeployBind.build();
             for (var deploy : deploys) {
                 if (keys.contains("dockerimage") || keys.contains("version")) {
