@@ -1,4 +1,4 @@
-FROM openjdk:21-jdk-bullseye
+FROM ghcr.io/graalvm/graalvm-community:21
 COPY install.json /home/app/
 COPY gfw.cfg /home/app/
 COPY ./target/#{f} /home/app/
