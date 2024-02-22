@@ -64,4 +64,7 @@ public class BaseTemplate {
     public JSONObject find(String key, Object id) {
         return fdb.find(key, id);
     }
+    public JSONObject findEx(JSONArray<JSONObject> conds) {
+        return fdb.findEx(conds);
+    }
 }

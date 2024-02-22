@@ -80,6 +80,14 @@ public class fastDBService {
 		return rj;
 	}
 
+	public JSONObject findEx(JSONArray<JSONObject> conds) {//find
+		JSONObject rj = null;
+		if (db != null) {
+			rj = db.where(conds).find();
+		}
+		return rj;
+	}
+
 	public boolean insert(JSONObject json) {
 		JSONArray<JSONObject> array = null;
 		if (json != null) {
