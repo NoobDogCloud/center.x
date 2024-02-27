@@ -21,10 +21,7 @@ public class UserModel {
 
     public static String buildJWT(String userName, JSONObject userInfo, String salt) {
         JSONObject safeUserInfo = UserModel.filterUserInfo(userInfo);
-        long ft = TimeHelper.build().nowMillis() + (86400 * 1000);
-        // userInfo.put("failure_time", ft);
-
-        return Jwt.createJwt(userName, userInfo, (int) ft);
+        return Jwt.createJwt(userName, safeUserInfo, 31536000);
     }
 
     // 取当前请求jwt
