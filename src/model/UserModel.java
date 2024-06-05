@@ -19,9 +19,9 @@ public class UserModel {
         return user;
     }
 
-    public static String buildJWT(String userName, JSONObject userInfo, String salt) {
+    public static String buildJWT(String userName, JSONObject userInfo, long expireSeconds) {
         JSONObject safeUserInfo = UserModel.filterUserInfo(userInfo);
-        return Jwt.createJwt(userName, safeUserInfo, 31536000);
+        return Jwt.createJwt(userName, safeUserInfo, expireSeconds);
     }
 
     // 取当前请求jwt

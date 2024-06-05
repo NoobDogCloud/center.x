@@ -3,6 +3,7 @@ package main.java.Api;
 import common.java.Database.DBLayer;
 import common.java.Rpc.RpcMessage;
 import common.java.String.StringHelper;
+import common.java.Time.TimeHelper;
 import db.service.ApplicationTemplate;
 import db.service.BaseTemplate;
 import model.UserModel;
@@ -34,7 +35,8 @@ public class Users extends BaseTemplate {
         if (JSONObject.isInvalided(userInfo)) {
             return RpcMessage.Instant(false, "当前用户不存在!");
         }
-        return UserModel.buildJWT(userId, userInfo, userInfo.getString("salt"));
+        long expired = TimeHelper.build().nowSecond() + 3600 * 24 * 30;
+        return UserModel.buildJWT(userId, userInfo, expired);
     }
 
     // 修改密码(需要重新登录)
@@ -68,7 +70,8 @@ public class Users extends BaseTemplate {
             return RpcMessage.Instant(false, "密码错误!");
         }
         JSONObject safeUserInfo = UserModel.filterUserInfo(userInfo);
-        return safeUserInfo.put("token", UserModel.buildJWT(userId, safeUserInfo, userInfo.getString("salt")));
+        long expired = TimeHelper.build().nowSecond() + 3600 * 24 * 30;
+        return safeUserInfo.put("token", UserModel.buildJWT(userId, safeUserInfo, expired));
     }
 
     // 登出
