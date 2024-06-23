@@ -65,8 +65,10 @@ public class Apps extends ApplicationTemplate {
         }
         var r = super.insert(nObj);
         // 发布应用
-        if (r instanceof Boolean) {
-            appBind.gatewayInfo(nObj);
+        if( !nObj.getString("category").equals("no-publish") ){
+            if (r instanceof Boolean) {
+                appBind.gatewayInfo(nObj);
+            }
         }
         return r;
     }

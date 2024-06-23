@@ -1,1 +1,1 @@
-gae run -v 3.0.0 -n gfw_center -h harbor.putao282.com:2443/library/ -f gfwCenter.x-#{v}-jar-with-dependencies.jar
+gae run -v 3.0.2 -n gfw_center -h harbor.putao282.com:2443/library/ -f gfwCenter.x-#{v}-jar-with-dependencies.jar

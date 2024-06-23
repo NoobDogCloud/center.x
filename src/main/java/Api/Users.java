@@ -71,6 +71,7 @@ public class Users extends BaseTemplate {
         }
         JSONObject safeUserInfo = UserModel.filterUserInfo(userInfo);
         long expired = TimeHelper.build().nowSecond() + 3600 * 24 * 30;
+        safeUserInfo.put("failure_times", expired);
         return safeUserInfo.put("token", UserModel.buildJWT(userId, safeUserInfo, expired));
     }
 

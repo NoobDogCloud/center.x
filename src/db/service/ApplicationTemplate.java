@@ -24,7 +24,7 @@ public class ApplicationTemplate extends BaseTemplate{
 
     public boolean update(String uids, JSONObject info) {
         if( info.has("userid") ){
-            throw new RuntimeException("非法操作!");
+            info.remove("userid");
         }
         return fdb.update(uids, info);
     }

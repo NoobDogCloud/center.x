@@ -27,7 +27,7 @@ public class AppsBefore extends RpcBefore {
                                     ClusterModel.check_k8s(info.getInt("k8s")) ? FilterReturn.success() : FilterReturn.fail("k8s集群信息无效"),
                             false,
                             "k8s信息未提供")
-                    .filter("name", (info, name) -> AppModel.check_name(info.getString(name)) ? FilterReturn.success() : FilterReturn.fail("无效应用名称"))
+                    .filter("name", (info, name) -> AppModel.check_name(info.getString(name)) ? FilterReturn.success() : FilterReturn.fail("无效应用名称,应用名称只支持小写字母,数字和-"))
                     .filterUnique("name", pk, (line) -> api.getDb().limit(2).field(new String[]{pk}).eq("name", line.getString("name")).select())
                     .check()
                     .getResult();
