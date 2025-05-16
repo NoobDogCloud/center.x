@@ -37,7 +37,7 @@
         <dependency>
             <groupId>com.auth0</groupId>
             <artifactId>java-jwt</artifactId>
-            <version>4.4.0</version>
+            <version>4.5.0</version>
         </dependency>
         <!-- k8s 库 -->
         <!-- https://mvnrepository.com/artifact/io.fabric8/kubernetes-client -->
@@ -51,7 +51,7 @@
         <dependency>
             <groupId>org.graalvm.nativeimage</groupId>
             <artifactId>native-image-maven-plugin</artifactId>
-            <version>21.2.0</version>
+            <version>20.3.17</version>
             <scope>provided</scope>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-resources-plugin -->
@@ -184,15 +184,34 @@
             </build>
         </profile>
     </profiles>
-    <distributionManagement>
-        <repository>
-            <id>rdc-releases</id>
-            <url>https://packages.aliyun.com/maven/repository/2008022-release-LfFRDq</url>
-        </repository>
-        <snapshotRepository>
-            <id>rdc-snapshots</id>
-            <url>https://packages.aliyun.com/maven/repository/2008022-snapshot-oYlpxF</url>
-        </snapshotRepository>
-    </distributionManagement>
 
+    <!-- 在 <dependencies> 下方添加仓库配置 -->
+    <repositories>
+        <repository>
+            <id>sonatype-snapshots</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+            <!-- 启用 SNAPSHOT 下载权限 -->
+            <snapshots>
+                <enabled>true</enabled>
+                <!-- 可选：设置更新策略（默认每天检查一次） -->
+                <updatePolicy>always</updatePolicy>
+            </snapshots>
+            <!-- 可选：关闭 releases 下载（仅用 SNAPSHOT） -->
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+        </repository>
+        <!-- 如果还有其他仓库（如阿里云镜像），按需添加 -->
+    </repositories>
+
+    <!-- 如果插件需要从 SNAPSHOT 仓库下载，可添加插件仓库 -->
+    <pluginRepositories>
+        <pluginRepository>
+            <id>sonatype-snapshots</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </pluginRepository>
+    </pluginRepositories>
 </project>
