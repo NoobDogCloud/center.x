@@ -54,12 +54,11 @@ public class Context {
      * @apiNote 根据微服务名称获得其需要的 应用详细，配置详细，部署（实例）详细 服务有关的 应用,配置,服务（融合了部署的）
      */
     public JSONObject sub(String serviceDeployName, String _appId) {
-        ServicesDeploy sd = new ServicesDeploy();
-        DBLayer deployDb = sd.getDb();
+        DBLayer deployDb =  ServicesDeploy.getPureDb();
         Set<String> cfgNmArr = new HashSet<>();
-        Services s = new Services();
         JSONArray<JSONObject> deployArrInfo = JSONArray.build();
-        Apps a = new Apps();
+        DBLayer serviceDb = Services.getPureDb();
+        DBLayer appDb = Apps.getPureDb();
         var appArrInfo = JSONArray.build();
         if (!StringHelper.isInvalided(_appId)) {
             deployDb.eq("appId", _appId);
@@ -72,7 +71,7 @@ public class Context {
                             String serviceId = deployInfo.getString("serviceid");
                             // 使用内部连接不为空时,替换外部链接方式
                             fixSubEndPeer(deployInfo);
-                            JSONObject _serviceInfo = s.find(serviceId);
+                            JSONObject _serviceInfo = serviceDb.eq(serviceDb.getGeneratedKeys(), serviceId).find();
                             if (JSONObject.isInvalided(_serviceInfo)) {
                                 _serviceInfo = JSONObject.build();
                             }
@@ -83,7 +82,7 @@ public class Context {
                                 cfgNmArr.addAll(ConfigModel.getConfigNameArr(deployInfo.getJson("config")));
                             }
                             // 获得该服务对应的应用
-                            JSONObject appInfo = a.find(appId);
+                            JSONObject appInfo = appDb.eq(appDb.getGeneratedKeys(), appId).find();
                             // 补充应用角色信息
                             JSONObject currentRoles = appInfo.getJson("roles");
                             if (JSONObject.isInvalided(currentRoles)) {
@@ -108,8 +107,7 @@ public class Context {
         // 获得配置信息
         JSONArray<JSONObject> cfgArrInfo = new JSONArray<>();
         if (cfgNmArr.size() > 0) {
-            Configs c = new Configs();
-            DBLayer configDb = c.getDb().or();
+            DBLayer configDb = Configs.getPureDb().or();
             for (String cfgName : cfgNmArr) {
                 configDb.eq("name", cfgName);
             }

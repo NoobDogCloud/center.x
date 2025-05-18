@@ -1,6 +1,7 @@
 package main.java.Api;
 
 import common.java.Apps.MicroService.Config.ModelServiceConfig;
+import common.java.Database.DBLayer;
 import common.java.File.FileText;
 import common.java.Http.Mime;
 import common.java.Rpc.RpcMessage;
@@ -8,6 +9,7 @@ import common.java.Rpc.RpcMime;
 import common.java.String.StringHelper;
 import common.java.Xml.XmlHelper;
 import db.service.ApplicationTemplate;
+import db.service.BaseTemplate;
 import main.java.Module.ServicesBind;
 import model.ConfigModel;
 import model.GscPomModel;
@@ -19,6 +21,10 @@ import java.nio.charset.StandardCharsets;
 public class Services extends ApplicationTemplate {
     public Services() {
         super("services");
+    }
+
+    public static DBLayer getPureDb() {
+        return new BaseTemplate("services").getDb();
     }
 
     public boolean update(String uids, JSONObject info) {

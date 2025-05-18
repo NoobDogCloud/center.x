@@ -1,6 +1,8 @@
 package main.java.Api;
 
+import common.java.Database.DBLayer;
 import db.service.ApplicationTemplate;
+import db.service.BaseTemplate;
 import model.MiddlewareName;
 import org.json.gsc.JSONObject;
 
@@ -8,6 +10,10 @@ import org.json.gsc.JSONObject;
 public class Configs extends ApplicationTemplate {
     public Configs() {
         super("configs");
+    }
+
+    public static DBLayer getPureDb() {
+        return new BaseTemplate("configs").getDb();
     }
 
     public JSONObject support(String sdk_id) {

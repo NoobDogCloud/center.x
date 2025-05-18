@@ -4,6 +4,7 @@ import common.java.Database.DBLayer;
 import common.java.Rpc.RpcMessage;
 import common.java.String.StringHelper;
 import db.service.ApplicationTemplate;
+import db.service.BaseTemplate;
 import main.java.Module.ServicesDeployBind;
 import model.ConfigModel;
 import org.json.gsc.JSONObject;
@@ -31,6 +32,10 @@ public class ServicesDeploy extends ApplicationTemplate {
 
     public ServicesDeploy() {
         super("servicesDeploy");
+    }
+
+    public static DBLayer getPureDb() {
+        return new BaseTemplate("servicesDeploy").getDb();
     }
 
     public String getConfigName() {

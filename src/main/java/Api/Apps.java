@@ -5,6 +5,7 @@ import common.java.Random.Random;
 import common.java.Rpc.RpcMessage;
 import common.java.String.StringHelper;
 import db.service.ApplicationTemplate;
+import db.service.BaseTemplate;
 import main.java.Module.AppsBind;
 import model.ConfigModel;
 import org.json.gsc.JSONObject;
@@ -32,6 +33,10 @@ public class Apps extends ApplicationTemplate {
     */
     public Apps() {
         super("apps");
+    }
+
+    public static DBLayer getPureDb() {
+        return new BaseTemplate("apps").getDb();
     }
 
     public String getConfigName() {
