@@ -1,13 +1,9 @@
 package main.java.Api;
 
 import db.service.ApplicationTemplate;
-import org.json.gsc.JSONArray;
+import model.MiddlewareName;
 import org.json.gsc.JSONObject;
 
-import java.util.HashSet;
-import java.util.Set;
-
-import static model.ConfigModel.middlewareTypeMap;
 
 public class Configs extends ApplicationTemplate {
     public Configs() {
@@ -28,10 +24,8 @@ public class Configs extends ApplicationTemplate {
         // 构造按分类的配置信息
         var configNames = depTemplate.keySet();
         for( String configName : configNames ) {
-            String configType = middlewareTypeMap.get(configName);
-            if( configType != null ) {
-                result.putWithArray(configType, JSONObject.build("name", configName).put("id", configName));
-            }
+            String configType = MiddlewareName.getTypeByName(configName).name();
+            result.putWithArray(configType, JSONObject.build("name", configName).put("id", configName));
         }
         return result;
 //        JSONObject result = JSONObject.build();

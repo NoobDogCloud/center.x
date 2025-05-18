@@ -16,19 +16,10 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 
-public class ConfigModel {
-    public static HashMap<String, String> middlewareTypeMap = new HashMap<>() {{
-        put("mongodb", "db");
-        put("mysql", "db");
-        put("h2", "db");
-        put("oracle", "db");
-        put("redis", "cache");
-        put("pulsar", "mq");
-        put("rabbitmq", "mq");
-        put("kafka", "mq");
-        put("activemq", "mq");
-    }};
+// 记录类 ConfigNode
 
+
+public class ConfigModel {
     // 根据配置分类定义获得有效配置信息
     public static JSONObject getConfigVal(JSONObject info) {
         JSONObject r = JSONObject.build();
